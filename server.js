@@ -22,7 +22,7 @@ app.get("/api/analyze", async (req, res) => {
     const strategyParam = `&strategy=${strategy}`;
     const categoriesParam = `&category=performance&category=accessibility&category=best-practices&category=seo&category=pwa`;
 
-    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${API_KEY}${strategyParam}${categoriesParam}`;
+const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}${strategyParam}${categoriesParam}`;
 
     const response = await fetch(apiUrl);
     if (!response.ok) {

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Analyseur de Site Web</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    input, button { padding: 0.5rem; font-size: 1rem; }
+    input { width: 70%; }
+    button { width: 25%; }
+    .green { color: green; }
+    .yellow { color: orange; }
+    .red { color: red; }
+    .result { margin-top: 2rem; }
+    h2, h3 { margin-top: 2rem; }
+    ul { margin-bottom: 1.5rem; padding-left: 1rem; }
+    li { margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Mini Analyseur de Site Web</h1>
+
+  <input id="urlInput" type="text" placeholder="Entrez une URL ex: https://monsite.com" />
+  <button id="analyzeBtn">Analyser</button>
+
+  <div id="result" class="result"></div>
+
+  <script>
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const urlInput = document.getElementById("urlInput");
+    const resultDiv = document.getElementById("result");
+
+    const AUDITS_PERTINENTS = {
+      performance: [
+        "first-contentful-paint",
+        "largest-contentful-paint",
+        "speed-index",
+        "total-blocking-time",
+        "cumulative-layout-shift"
+      ],
+      accessibility: [
+        "image-alt",
+        "color-contrast",
+        "label",
+        "document-title"
+      ],
+      "best-practices": [
+        "uses-http2",
+        "errors-in-console",
+        "no-vulnerable-libraries"
+      ],
+      seo: [
+        "meta-description",
+        "document-title",
+        "link-text",
+        "robots-txt"
+      ]
+    };
+
+    const TITRES_FR = {
+      "first-contentful-paint": "Apparition du contenu",
+      "largest-contentful-paint": "Chargement principal",
+      "speed-index": "Vitesse globale de chargement",
+      "total-blocking-time": "Temps de blocage",
+      "cumulative-layout-shift": "Stabilité visuelle",
+      "image-alt": "Texte alternatif des images",
+      "color-contrast": "Contraste des couleurs",
+      "label": "Champs de formulaire clairs",
+      "document-title": "Titre de la page",
+      "uses-http2": "Connexion optimisée (HTTP/2)",
+      "errors-in-console": "Erreurs dans le navigateur",
+      "no-vulnerable-libraries": "Sécurité des scripts",
+      "meta-description": "Description visible dans Google",
+      "link-text": "Liens compréhensibles",
+      "robots-txt": "Fichier robots.txt présent"
+    };
+
+    const DESCRIPTIONS_FR = {
+      "first-contentful-paint": "Mesure le moment où le premier texte ou la première image apparaît à l’écran.",
+      "largest-contentful-paint": "Temps nécessaire pour afficher le plus gros élément visible de la page.",
+      "speed-index": "Montre à quelle vitesse le contenu principal s'affiche.",
+      "total-blocking-time": "Durée pendant laquelle le site est inutilisable pendant le chargement.",
+      "cumulative-layout-shift": "Évalue les changements visuels inattendus pendant le chargement.",
+      "image-alt": "Ajoutez des textes alternatifs aux images pour l’accessibilité.",
+      "color-contrast": "Vérifie si le contraste texte/fond est suffisant pour la lisibilité.",
+      "label": "Assurez-vous que les champs de formulaire sont bien identifiés.",
+      "document-title": "Un titre de page aide les utilisateurs et les moteurs de recherche à comprendre le contenu.",
+      "uses-http2": "HTTP/2 permet un chargement plus rapide et moderne du site.",
+      "errors-in-console": "Des erreurs dans la console peuvent signaler des bugs à corriger.",
+      "no-vulnerable-libraries": "Certaines bibliothèques utilisées peuvent présenter des failles de sécurité.",
+      "meta-description": "Une description aide Google à afficher un résumé de votre page dans les résultats de recherche.",
+      "link-text": "Le texte des liens doit être explicite (évitez 'cliquez ici').",
+      "robots-txt": "Un fichier robots.txt aide les moteurs à explorer votre site correctement."
+    };
+
+    function couleurScore(score) {
+      if (score >= 0.9) return "green";
+      if (score >= 0.5) return "yellow";
+      return "red";
+    }
+
+    function afficherAudits(categorie, audits, liste) {
+      const utiles = liste
+        .map(id => audits[id])
+        .filter(a => a && a.title && a.description);
+
+      if (utiles.length === 0) return "";
+
+      utiles.sort((a, b) => (a.score ?? 1) - (b.score ?? 1)); // tri rouge > jaune > vert
+
+      let html = `<h3>${categorie}</h3><ul>`;
+      utiles.forEach(a => {
+        const couleur = couleurScore(a.score ?? 1);
+        const titre = TITRES_FR[a.id] || a.title;
+        const description = DESCRIPTIONS_FR[a.id] || a.description;
+        html += `<li class="${couleur}">
+          <strong>${titre}</strong>${a.displayValue ? ` – ${a.displayValue}` : ""}
+          <br/><small>${description}</small>
+        </li>`;
+      });
+      html += `</ul>`;
+      return html;
+    }
+
+    analyzeBtn.addEventListener("click", async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert("Merci de saisir une URL");
+        return;
+      }
+
+      resultDiv.innerHTML = "Analyse en cours...";
+
+      try {
+        const res = await fetch(`/api/analyze?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+
+        if (data.error) {
+          resultDiv.textContent = "Erreur : " + (typeof data.error === "object" ? JSON.stringify(data.error) : data.error);
+          return;
+        }
+
+        const lighthouse = data.lighthouseResult;
+        const audits = lighthouse.audits;
+
+        const scores = {
+          performance: lighthouse.categories?.performance?.score,
+          accessibility: lighthouse.categories?.accessibility?.score,
+          "best-practices": lighthouse.categories?.["best-practices"]?.score,
+          seo: lighthouse.categories?.seo?.score
+        };
+
+        let html = `<h2>Scores globaux</h2><ul>`;
+        for (const [key, score] of Object.entries(scores)) {
+          const couleur = couleurScore(score ?? 0);
+          const label = {
+            performance: "Performance",
+            accessibility: "Accessibilité",
+            "best-practices": "Bonnes pratiques",
+            seo: "SEO"
+          }[key];
+          html += `<li class="${couleur}">${label} : ${(score * 100).toFixed(0)}%</li>`;
+        }
+        html += `</ul>`;
+
+        html += `<h2>Détails par catégorie</h2>`;
+
+        for (const [cat, liste] of Object.entries(AUDITS_PERTINENTS)) {
+          html += afficherAudits({
+            performance: "Performance",
+            accessibility: "Accessibilité",
+            "best-practices": "Bonnes pratiques",
+            seo: "SEO"
+          }[cat], audits, liste);
+        }
+
+        resultDiv.innerHTML = html;
+
+      } catch (err) {
+        console.error(err);
+        resultDiv.textContent = "Erreur lors de l'analyse.";
+      }
+    });
+  </script>
+
+</body>
+</html>
