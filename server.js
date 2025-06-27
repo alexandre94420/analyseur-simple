@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
-const apiKey = process.env.API_KEY;
+const apiKey = process.env.API_KEY;   // process.env.API_KEY
 
 // Middleware
 app.use(cors());
