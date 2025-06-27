@@ -1,8 +1,8 @@
-name: Déploiement sur GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "master" ]  # Changé de "main" à "master"
+    branches: ["master"]  # Ou "main" selon votre branche
 
 permissions:
   contents: read
@@ -13,25 +13,23 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configurer Pages
-        uses: actions/configure-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4  # Version mise à jour
 
-      - name: Préparer les fichiers
+      - name: Build static site
         run: |
-          if [ ! -d "public" ]; then
-            mkdir public
-            mv *.html public/ || true
-            mv *.css public/ || true
-            mv *.js public/ || true
-          fi
+          mkdir -p public
+          [ -f index.html ] && cp index.html public/ || true
+          [ -f style.css ] && cp style.css public/ || true
+          [ -f script.js ] && cp script.js public/ || true
 
-      - name: Envoyer les fichiers
-        uses: actions/upload-pages-artifact@v2
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3  # Nouvelle version
         with:
-          path: "public/"
+          path: 'public/'
 
-      - name: Déployer
-        uses: actions/deploy-pages@v2
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4  # Version mise à jour
