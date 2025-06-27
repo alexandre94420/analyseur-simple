@@ -1,0 +1,37 @@
+name: Déploiement sur GitHub Pages
+
+on:
+  push:
+    branches: [ "master" ]  # Changé de "main" à "master"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Configurer Pages
+        uses: actions/configure-pages@v3
+
+      - name: Préparer les fichiers
+        run: |
+          if [ ! -d "public" ]; then
+            mkdir public
+            mv *.html public/ || true
+            mv *.css public/ || true
+            mv *.js public/ || true
+          fi
+
+      - name: Envoyer les fichiers
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: "public/"
+
+      - name: Déployer
+        uses: actions/deploy-pages@v2
